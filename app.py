@@ -1,8 +1,6 @@
 # ============================================================
 # 迪士尼路径规划可视化系统 - 后端服务
-# 纯Python标准库实现，无需安装任何第三方包
-# 可在 Jupyter Notebook 或 Spyder 中直接运行
-# 启动后浏览器访问 http://127.0.0.1:5000
+# 适配 Render 云端部署版本（使用相对路径 + 0.0.0.0 监听）
 # ============================================================
 
 import os
@@ -19,13 +17,20 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 # ============================================================
-# 0. 全局配置
+# 0. 全局配置 - 使用当前脚本所在目录的相对路径
 # ============================================================
 
-REALTIME_PATH = r"C:\Users\fan\Disney4\disney_2026_05_01_hourly_wait_clean.xlsx"
-ATTR_PATH = r"C:\Users\fan\Disney2（3）\修正餐饮购物0.6后的8维向量数据_20260502_231148.xlsx"
-HIST_PATH = r"C:\Users\fan\Disney3（2）\上海迪士尼_QueueTimes_20240301_20260301.xlsx"
-INFO_PATH = r"C:\Users\fan\Disney3（2）\最终项目数据表_中英文对应_填充版3.2.xlsx"
+# 获取当前脚本所在目录
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
+
+# 数据文件路径（云端用）
+REALTIME_PATH = os.path.join(DATA_DIR, "disney_2026_05_01_hourly_wait_clean.xlsx")
+ATTR_PATH = os.path.join(DATA_DIR, "修正餐饮购物0.6后的8维向量数据_20260502_231148.xlsx")
+HIST_PATH = os.path.join(DATA_DIR, "上海迪士尼_QueueTimes_20240301_20260301.xlsx")
+INFO_PATH = os.path.join(DATA_DIR, "最终项目数据表_中英文对应_填充版3.2.xlsx")
+
 TARGET_DATE = "2026-05-01"
 QUEUE_DEADLINE = "21:30"
 ENTRANCE_NAME = "上海迪士尼入口"
@@ -739,12 +744,7 @@ def simulate_route_sequence(sequence, start_time, start_location, user_type,
 # 5. HTTP 请求处理（纯标准库，无需 Flask）
 # ============================================================
 
-# 读取 HTML 模板（兼容 Jupyter exec() 和 Spyder 直接运行）
-try:
-    _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-except NameError:
-    _BASE_DIR = os.getcwd()
-TEMPLATE_DIR = os.path.join(_BASE_DIR, "templates")
+# 读取 HTML 模板
 with open(os.path.join(TEMPLATE_DIR, "index.html"), "r", encoding="utf-8") as f:
     HTML_TEMPLATE = f.read()
 
@@ -932,24 +932,21 @@ class DisneyRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
-
 # ============================================================
-# 6. 启动服务
+# 6. 启动服务（适配 Render 云端环境）
 # ============================================================
 
-def start_server(port=5000):
-    server = HTTPServer(("127.0.0.1", port), DisneyRequestHandler)
+if __name__ == "__main__":
+    # Render 会通过环境变量 PORT 指定监听端口
+    port = int(os.environ.get("PORT", 5000))
+    server = HTTPServer(("0.0.0.0", port), DisneyRequestHandler)
     print("\n" + "=" * 60)
-    print(f"  🏰 迪士尼乐园路径规划可视化系统")
-    print(f"  🌐 请在浏览器中打开: http://127.0.0.1:{port}")
-    print(f"  ⚠️  关闭此窗口或按 Ctrl+C 停止服务")
+    print("  🏰 迪士尼乐园路径规划可视化系统")
+    print(f"  🌐 服务已启动，监听端口 {port}")
+    print("  ⚠️  关闭此窗口或按 Ctrl+C 停止服务")
     print("=" * 60 + "\n")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\n服务已停止。")
         server.shutdown()
-
-
-if __name__ == "__main__":
-    start_server(5000)
