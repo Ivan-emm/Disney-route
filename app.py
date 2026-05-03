@@ -19,17 +19,15 @@ from urllib.parse import urlparse, parse_qs
 # ============================================================
 # 0. 全局配置 - 使用当前脚本所在目录的相对路径
 # ============================================================
-
-# 获取当前脚本所在目录
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 
-# 数据文件路径（云端用）
 REALTIME_PATH = os.path.join(DATA_DIR, "disney_2026_05_01_hourly_wait_clean.xlsx")
 ATTR_PATH = os.path.join(DATA_DIR, "修正餐饮购物0.6后的8维向量数据_20260502_231148.xlsx")
 HIST_PATH = os.path.join(DATA_DIR, "上海迪士尼_QueueTimes_20240301_20260301.xlsx")
 INFO_PATH = os.path.join(DATA_DIR, "最终项目数据表_中英文对应_填充版3.2.xlsx")
+# 获取当前脚本所在目录
 
 TARGET_DATE = "2026-05-01"
 QUEUE_DEADLINE = "21:30"
