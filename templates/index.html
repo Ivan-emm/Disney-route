@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>迪士尼乐园 · 路径规划系统</title>
+<style>
+/* ============================================================
+   Disney Magic Kingdom Theme
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+
+:root {
+  --disney-blue: #1a2a6c;
+  --disney-purple: #5a3d8a;
+  --disney-gold: #f7c948;
+  --disney-pink: #f06a8d;
+  --disney-dark: #0d1b4a;
+  --disney-white: #fef9f0;
+  --magic-sparkle: #ffd700;
+  --castle-gray: #6b7b9a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(180deg, #0a0a2e 0%, #1a1a4e 15%, #1e3264 30%, #2d1b4e 70%, #1a0a2e 100%);
+  background-attachment: fixed;
+  color: #e8e0f0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ---- Stars Background ---- */
+.stars-container {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+  overflow: hidden;
+}
+.star {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  animation: twinkle var(--dur) ease-in-out infinite;
+  animation-delay: var(--delay);
+  opacity: 0;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.8); }
+}
+.sparkle {
+  position: absolute;
+  width: 4px; height: 4px;
+  background: var(--magic-sparkle);
+  border-radius: 50%;
+  box-shadow: 0 0 6px 2px var(--magic-sparkle);
+  animation: floatUp var(--dur2) ease-out infinite;
+  animation-delay: var(--delay2);
+  opacity: 0;
+}
+@keyframes floatUp {
+  0% { opacity: 0; transform: translateY(0) scale(0); }
+  20% { opacity: 1; transform: translateY(-30px) scale(1.5); }
+  100% { opacity: 0; transform: translateY(-200px) scale(0); }
+}
+
+/* ---- Main Container ---- */
+.main-container {
+  position: relative; z-index: 1;
+  max-width: 1400px; margin: 0 auto; padding: 20px;
+}
+
+/* ---- Header ---- */
+.header {
+  text-align: center; padding: 40px 20px 30px;
+  position: relative;
+}
+.castle-icon {
+  font-size: 80px; line-height: 1;
+  filter: drop-shadow(0 0 30px rgba(247, 201, 72, 0.5));
+  animation: castleGlow 3s ease-in-out infinite;
+}
+@keyframes castleGlow {
+  0%, 100% { filter: drop-shadow(0 0 30px rgba(247, 201, 72, 0.5)); }
+  50% { filter: drop-shadow(0 0 50px rgba(247, 201, 72, 0.9)); }
+}
+.header h1 {
+  font-size: 42px; font-weight: 900;
+  background: linear-gradient(180deg, #f7c948 0%, #f5a623 50%, #e8961e 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  letter-spacing: 4px;
+  margin: 10px 0 5px;
+}
+.header .subtitle {
+  font-size: 16px; color: #b8a9d4;
+  letter-spacing: 6px; font-weight: 300;
+}
+.header .divider {
+  width: 300px; height: 2px; margin: 20px auto;
+  background: linear-gradient(90deg, transparent, #f7c948, transparent);
+}
+
+/* ---- Cards ---- */
+.card {
+  background: linear-gradient(135deg, rgba(30, 20, 60, 0.85), rgba(20, 15, 50, 0.9));
+  border: 1px solid rgba(247, 201, 72, 0.2);
+  border-radius: 20px; padding: 28px; margin-bottom: 24px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  transition: all 0.3s ease;
+}
+.card:hover {
+  border-color: rgba(247, 201, 72, 0.4);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(247, 201, 72, 0.1), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.card-title {
+  font-size: 20px; font-weight: 700; color: #f7c948;
+  margin-bottom: 20px; padding-bottom: 12px;
+  border-bottom: 1px solid rgba(247, 201, 72, 0.2);
+  display: flex; align-items: center; gap: 10px;
+}
+.card-title .icon { font-size: 24px; }
+
+/* ---- Two Column Layout ---- */
+.two-col {
+  display: grid; grid-template-columns: 420px 1fr;
+  gap: 24px; align-items: start;
+}
+@media (max-width: 960px) {
+  .two-col { grid-template-columns: 1fr; }
+}
+
+/* ---- Form Elements ---- */
+.form-group { margin-bottom: 18px; }
+.form-group label {
+  display: block; font-size: 14px; font-weight: 600;
+  color: #c8b8e8; margin-bottom: 6px; letter-spacing: 1px;
+}
+.form-group label .label-icon { margin-right: 6px; }
+
+select, input[type="text"], input[type="time"] {
+  width: 100%; padding: 12px 16px;
+  background: rgba(15, 10, 35, 0.7);
+  border: 1px solid rgba(247, 201, 72, 0.3);
+  border-radius: 12px; color: #f0e8ff;
+  font-size: 15px; font-family: inherit;
+  transition: all 0.3s ease;
+  outline: none;
+}
+select:focus, input:focus {
+  border-color: #f7c948;
+  box-shadow: 0 0 15px rgba(247, 201, 72, 0.2);
+  background: rgba(20, 12, 40, 0.9);
+}
+select option {
+  background: #1a1040; color: #f0e8ff;
+}
+select[multiple] {
+  height: 200px; overflow-y: auto;
+}
+
+.multi-select-hint {
+  font-size: 12px; color: #8878b8; margin-top: 4px;
+}
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 32px; border: none; border-radius: 30px;
+  font-size: 16px; font-weight: 700; font-family: inherit;
+  cursor: pointer; letter-spacing: 2px;
+  transition: all 0.3s ease; position: relative; overflow: hidden;
+}
+.btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, #f7c948, #e8961e);
+  color: #1a0a2e; box-shadow: 0 4px 20px rgba(247, 201, 72, 0.3);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(247, 201, 72, 0.5);
+}
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled {
+  opacity: 0.5; cursor: not-allowed; transform: none;
+  box-shadow: 0 2px 10px rgba(247, 201, 72, 0.1);
+}
+
+.btn-reset {
+  background: rgba(255,255,255,0.08);
+  color: #c8b8e8; border: 1px solid rgba(255,255,255,0.15);
+  padding: 10px 20px; font-size: 13px;
+}
+.btn-reset:hover { background: rgba(255,255,255,0.15); }
+
+.btn-small {
+  padding: 8px 16px; font-size: 12px; border-radius: 20px;
+  background: rgba(247, 201, 72, 0.15);
+  color: #f7c948; border: 1px solid rgba(247, 201, 72, 0.3);
+  cursor: pointer; font-family: inherit;
+}
+.btn-small:hover { background: rgba(247, 201, 72, 0.25); }
+
+/* ---- Data Info Bar ---- */
+.info-bar {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  margin-bottom: 20px;
+}
+.info-chip {
+  background: rgba(247, 201, 72, 0.08);
+  border: 1px solid rgba(247, 201, 72, 0.2);
+  border-radius: 20px; padding: 8px 16px;
+  font-size: 13px; color: #d8c8f0;
+}
+.info-chip strong { color: #f7c948; }
+
+/* ---- Results Area ---- */
+.results-area { display: none; }
+.results-area.active { display: block; }
+
+/* ---- Tabs ---- */
+.tabs {
+  display: flex; gap: 4px; margin-bottom: 20px;
+  border-bottom: 1px solid rgba(247, 201, 72, 0.15); padding-bottom: 0;
+}
+.tab {
+  padding: 12px 24px; cursor: pointer;
+  border-radius: 12px 12px 0 0;
+  font-size: 14px; font-weight: 600;
+  color: #9888c0; letter-spacing: 1px;
+  transition: all 0.3s ease;
+  background: transparent; border: none; font-family: inherit;
+}
+.tab:hover { color: #d8c0f0; }
+.tab.active {
+  color: #f7c948; background: rgba(247, 201, 72, 0.08);
+  border-bottom: 2px solid #f7c948;
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ---- Tables ---- */
+.table-container {
+  overflow-x: auto; border-radius: 12px;
+  border: 1px solid rgba(247, 201, 72, 0.15);
+  max-height: 500px; overflow-y: auto;
+}
+.table-container.large { max-height: 600px; }
+
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px; min-width: 800px;
+}
+table thead {
+  position: sticky; top: 0; z-index: 2;
+}
+table th {
+  background: linear-gradient(180deg, #2a1a5a, #1e1240);
+  color: #f7c948; padding: 12px 10px;
+  font-weight: 600; text-align: center;
+  border-bottom: 2px solid rgba(247, 201, 72, 0.3);
+  white-space: nowrap; font-size: 12px;
+}
+table td {
+  padding: 10px; text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  color: #d8c8f0;
+}
+table tbody tr {
+  transition: all 0.2s ease;
+}
+table tbody tr:hover {
+  background: rgba(247, 201, 72, 0.06);
+}
+table tbody tr:nth-child(even) {
+  background: rgba(255,255,255,0.02);
+}
+table tbody tr:nth-child(even):hover {
+  background: rgba(247, 201, 72, 0.08);
+}
+
+.rank-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  font-weight: 700; font-size: 14px;
+}
+.rank-1 { background: linear-gradient(135deg, #ffd700, #ffb800); color: #1a0a2e; }
+.rank-2 { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #1a0a2e; }
+.rank-3 { background: linear-gradient(135deg, #cd7f32, #a0522d); color: white; }
+.rank-other { background: rgba(255,255,255,0.1); color: #c8b8e8; }
+
+.highlight { color: #f7c948; font-weight: 600; }
+.score-good { color: #4caf84; font-weight: 700; }
+.score-warn { color: #f0a040; font-weight: 700; }
+.tag-feasible { color: #4caf84; }
+.tag-infeasible { color: #f06a8d; }
+
+/* ---- Exclude Section ---- */
+.exclude-list {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;
+}
+.exclude-chip {
+  background: rgba(240, 106, 141, 0.1);
+  border: 1px solid rgba(240, 106, 141, 0.3);
+  border-radius: 16px; padding: 6px 14px;
+  font-size: 12px; color: #f06a8d;
+}
+
+/* ---- Route Summary Cards ---- */
+.route-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 16px;
+}
+.route-card {
+  background: linear-gradient(135deg, rgba(30, 20, 60, 0.6), rgba(20, 15, 50, 0.7));
+  border: 1px solid rgba(247, 201, 72, 0.15);
+  border-radius: 16px; padding: 20px; cursor: pointer;
+  transition: all 0.3s ease;
+}
+.route-card:hover {
+  border-color: rgba(247, 201, 72, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.route-card.selected {
+  border-color: #f7c948;
+  box-shadow: 0 0 20px rgba(247, 201, 72, 0.2);
+}
+.route-card .route-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.route-card .route-rank {
+  font-size: 28px; font-weight: 900; color: #f7c948;
+}
+.route-card .route-projects {
+  font-size: 15px; font-weight: 600; color: #e8d8f8;
+  margin-bottom: 10px; line-height: 1.6;
+}
+.route-card .route-stats {
+  display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px;
+}
+.route-card .route-stat {
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px; padding: 6px 12px;
+}
+.route-card .route-stat span { color: #f7c948; font-weight: 600; }
+
+/* ---- Timeline ---- */
+.timeline { position: relative; padding-left: 30px; }
+.timeline::before {
+  content: ''; position: absolute; left: 12px; top: 0; bottom: 0;
+  width: 2px; background: linear-gradient(180deg, #f7c948, #5a3d8a, #f7c948);
+}
+.timeline-item {
+  position: relative; margin-bottom: 12px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);
+}
+.timeline-item::before {
+  content: ''; position: absolute; left: -22px; top: 16px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #f7c948; box-shadow: 0 0 8px rgba(247, 201, 72, 0.5);
+}
+.timeline-item.walk::before { background: #6b9ef0; box-shadow: 0 0 8px rgba(107, 158, 240, 0.5); }
+.timeline-item.queue::before { background: #f0a040; box-shadow: 0 0 8px rgba(240, 160, 64, 0.5); }
+.timeline-item.play::before { background: #4caf84; box-shadow: 0 0 8px rgba(76, 175, 132, 0.5); }
+.timeline-item.meal::before { background: #f06a8d; box-shadow: 0 0 8px rgba(240, 106, 141, 0.5); }
+.timeline-item.shop::before { background: #b878d8; box-shadow: 0 0 8px rgba(184, 120, 216, 0.5); }
+
+.timeline-time { font-size: 12px; color: #9888c0; }
+.timeline-name { font-size: 14px; font-weight: 600; color: #e8d8f8; }
+.timeline-detail { font-size: 12px; color: #8878b0; margin-top: 2px; }
+
+/* ---- Loading ---- */
+.loading-overlay {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(10, 10, 30, 0.8); z-index: 999;
+  justify-content: center; align-items: center; flex-direction: column;
+}
+.loading-overlay.active { display: flex; }
+.magic-spinner {
+  width: 60px; height: 60px; border: 3px solid rgba(247, 201, 72, 0.2);
+  border-top-color: #f7c948; border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text {
+  margin-top: 16px; color: #f7c948; font-size: 16px; letter-spacing: 3px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(247, 201, 72, 0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(247, 201, 72, 0.5); }
+
+/* ---- Empty State ---- */
+.empty-state {
+  text-align: center; padding: 40px; color: #8878b8;
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+/* ---- Footer ---- */
+.footer {
+  text-align: center; padding: 30px; color: #6658a0;
+  font-size: 12px; letter-spacing: 2px;
+}
+</style>
+</head>
+<body>
+
+<!-- Stars Background -->
+<div class="stars-container" id="starsContainer"></div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="magic-spinner"></div>
+  <div class="loading-text">魔法计算中...</div>
+</div>
+
+<!-- Main Content -->
+<div class="main-container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="castle-icon">🏰</div>
+    <h1>迪士尼乐园路径规划</h1>
+    <div class="subtitle">✦ SHANGHAI DISNEYLAND · SMART ROUTE PLANNER ✦</div>
+    <div class="divider"></div>
+  </div>
+
+  <!-- Data Info Bar -->
+  <div class="info-bar" id="infoBar">
+    <div class="info-chip">📅 目标日期 <strong id="infoDate">--</strong></div>
+    <div class="info-chip">🏷️ 日期类型 <strong id="infoDateType">--</strong></div>
+    <div class="info-chip">🎢 当天开放 <strong id="infoOpen">--</strong> 个项目</div>
+    <div class="info-chip">⏰ 排队截止 <strong id="infoDeadline">--</strong></div>
+    <div class="info-chip">🌙 闭园时间 <strong id="infoClose">--</strong></div>
+  </div>
+
+  <!-- Two Column: Input + Data Preview -->
+  <div class="two-col">
+
+    <!-- Left: Input Panel -->
+    <div class="card" id="inputCard">
+      <div class="card-title"><span class="icon">🎯</span>路径规划输入</div>
+
+      <div class="form-group">
+        <label><span class="label-icon">🕐</span>当前时间</label>
+        <input type="time" id="currentTime" value="09:35" step="60">
+      </div>
+
+      <div class="form-group">
+        <label><span class="label-icon">👤</span>游客类型</label>
+        <select id="userType">
+          <option value="亲子">👨‍👩‍👧 亲子</option>
+          <option value="情侣">💑 情侣</option>
+          <option value="普通" selected>🧑 普通</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label><span class="label-icon">📍</span>当前位置</label>
+        <select id="currentLocation">
+          <option value="">加载中...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label><span class="label-icon">✅</span>已完成项目（可多选）</label>
+        <select id="doneProjects" multiple>
+          <option value="">加载中...</option>
+        </select>
+        <div class="multi-select-hint">💡 按住 Ctrl 键可多选；若无已完成项目则不选</div>
+      </div>
+
+      <button class="btn btn-primary" id="btnCalculate" onclick="runCalculation()">
+        ✨ 开始路径规划
+      </button>
+
+      <div style="margin-top:12px; text-align:center;">
+        <button class="btn btn-reset" onclick="resetAll()">🔄 重置输入</button>
+      </div>
+    </div>
+
+    <!-- Right: Data Preview (read-only) -->
+    <div class="card" id="dataCard">
+      <div class="card-title"><span class="icon">📊</span>数据总览（只读）</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px;" id="dataOverview">
+        <div style="color:#9888c0;">⏳ 加载中...</div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="card-title" style="font-size:15px;"><span class="icon">🎢</span>当天开放项目列表</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; max-height:250px; overflow-y:auto;" id="openProjectsList">
+          <span style="color:#9888c0;">加载中...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Area -->
+  <div class="results-area" id="resultsArea">
+
+    <!-- Phase 1: Top 5 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">🏆</span>第一阶段：动态满意度 Top5 推荐</div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('top5Table')">📋 Top5 排名表</button>
+        <button class="tab" onclick="switchTab('allResultsTable')">📊 全部项目排序</button>
+        <button class="tab" onclick="switchTab('excludeTable')">🚫 剔除项目原因</button>
+      </div>
+
+      <div class="tab-content active" id="tab-top5Table">
+        <div class="table-container" id="top5TableContainer"></div>
+      </div>
+      <div class="tab-content" id="tab-allResultsTable">
+        <div class="table-container large" id="allResultsContainer"></div>
+      </div>
+      <div class="tab-content" id="tab-excludeTable">
+        <div class="exclude-list" id="excludeListContainer"></div>
+      </div>
+    </div>
+
+    <!-- Phase 2: Route Planning -->
+    <div class="card">
+      <div class="card-title"><span class="icon">🗺️</span>第二阶段：三项目路线规划</div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchRouteTab('routeCards')">🃏 路线推荐卡片</button>
+        <button class="tab" onclick="switchRouteTab('routeTable')">📋 路线汇总表</button>
+        <button class="tab" onclick="switchRouteTab('routeTimeline')">⏱️ 路线时间线</button>
+      </div>
+
+      <div class="tab-content active" id="tab-routeCards">
+        <div class="route-cards" id="routeCardsContainer"></div>
+      </div>
+      <div class="tab-content" id="tab-routeTable">
+        <div class="table-container large" id="routeTableContainer"></div>
+      </div>
+      <div class="tab-content" id="tab-routeTimeline">
+        <div id="timelineContainer" style="max-height:600px; overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    ✨ Disneyland Route Planner · 数据基于 2026-05-01 节假日 · 九维动态满意度模型 ✨
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Initialize
+// ============================================================
+
+let allData = null;
+let calcResult = null;
+let selectedRouteIdx = 0;
+
+// Generate stars
+(function() {
+  const container = document.getElementById('starsContainer');
+  for (let i = 0; i < 80; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.width = star.style.height = (Math.random() * 2.5 + 1) + 'px';
+    star.style.setProperty('--dur', (Math.random() * 3 + 2) + 's');
+    star.style.setProperty('--delay', (Math.random() * 5) + 's');
+    container.appendChild(star);
+  }
+  for (let i = 0; i < 30; i++) {
+    const sparkle = document.createElement('div');
+    sparkle.className = 'sparkle';
+    sparkle.style.left = Math.random() * 100 + '%';
+    sparkle.style.top = (Math.random() * 60 + 20) + '%';
+    sparkle.style.setProperty('--dur2', (Math.random() * 4 + 3) + 's');
+    sparkle.style.setProperty('--delay2', (Math.random() * 8) + 's');
+    container.appendChild(sparkle);
+  }
+})();
+
+// Load initial data
+async function loadDataInfo() {
+  try {
+    const [infoRes, projRes] = await Promise.all([
+      fetch('/api/data-info'),
+      fetch('/api/projects')
+    ]);
+    const info = await infoRes.json();
+    const proj = await projRes.json();
+    allData = { info, proj };
+
+    // Update info bar
+    document.getElementById('infoDate').textContent = info.target_date;
+    document.getElementById('infoDateType').textContent = info.date_type;
+    document.getElementById('infoOpen').textContent = info.open_projects_count;
+    document.getElementById('infoDeadline').textContent = info.queue_deadline;
+    document.getElementById('infoClose').textContent = info.park_close;
+
+    // Update data overview
+    document.getElementById('dataOverview').innerHTML = `
+      <div>📅 目标日期 <strong style="color:#f7c948;">${info.target_date}</strong></div>
+      <div>🏷️ 日期类型 <strong style="color:#f7c948;">${info.date_type}</strong></div>
+      <div>🎢 当天开放 <strong style="color:#f7c948;">${info.open_projects_count}</strong> 个项目</div>
+      <div>📚 历史参考 <strong style="color:#f7c948;">${info.hist_wait_count}</strong> 个项目</div>
+      <div>🧮 八维向量 <strong style="color:#f7c948;">${info.attr_count}</strong> 个条目</div>
+      <div>⚙️ 半衰减 η <strong style="color:#f7c948;">${info.eta}</strong> | K9 <strong style="color:#f7c948;">${info.k9}</strong></div>
+      <div>🚫 排队截止 <strong style="color:#f7c948;">${info.queue_deadline}</strong></div>
+      <div>🌙 闭园时间 <strong style="color:#f7c948;">${info.park_close}</strong></div>
+    `;
+
+    // Open projects chips
+    document.getElementById('openProjectsList').innerHTML =
+      info.open_projects.map(p => `<span class="info-chip" style="font-size:12px;">🎠 ${p}</span>`).join('');
+
+    // Populate selects
+    const locSel = document.getElementById('currentLocation');
+    locSel.innerHTML = proj.location_options.map((o, i) => {
+      const icon = i === 0 ? '🏰' : i === 1 ? '🛍️' : '🎢';
+      return `<option value="${o}">${icon} ${o}</option>`;
+    }).join('');
+
+    const doneSel = document.getElementById('doneProjects');
+    doneSel.innerHTML = proj.all_projects.map(p =>
+      `<option value="${p}">${p}</option>`
+    ).join('');
+
+  } catch (err) {
+    console.error('Failed to load data:', err);
+    document.getElementById('dataOverview').innerHTML =
+      '<div style="color:#f06a8d;">❌ 数据加载失败，请确认后端服务已启动</div>';
+  }
+}
+
+// ============================================================
+// Run Calculation
+// ============================================================
+
+async function runCalculation() {
+  const btn = document.getElementById('btnCalculate');
+  const loading = document.getElementById('loadingOverlay');
+  const resultsArea = document.getElementById('resultsArea');
+
+  btn.disabled = true;
+  loading.classList.add('active');
+
+  const currentTime = document.getElementById('currentTime').value || '09:35';
+  const userType = document.getElementById('userType').value;
+  const currentLocation = document.getElementById('currentLocation').value;
+  const doneSel = document.getElementById('doneProjects');
+  const doneProjects = Array.from(doneSel.selectedOptions).map(o => o.value);
+
+  try {
+    const res = await fetch('/api/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        current_time: currentTime,
+        user_type: userType,
+        current_location: currentLocation,
+        done_projects: doneProjects,
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert('计算失败：' + (err.error || '未知错误'));
+      return;
+    }
+
+    calcResult = await res.json();
+    resultsArea.classList.add('active');
+    selectedRouteIdx = 0;
+
+    renderPhase1();
+    renderPhase2();
+    resultsArea.scrollIntoView({ behavior: 'smooth' });
+
+  } catch (err) {
+    console.error('Calculation error:', err);
+    alert('计算请求失败，请检查后端服务是否运行。\n\n错误：' + err.message);
+  } finally {
+    btn.disabled = false;
+    loading.classList.remove('active');
+  }
+}
+
+// ============================================================
+// Render Phase 1: Top5
+// ============================================================
+
+function renderPhase1() {
+  const { top5, all_results, exclude_records } = calcResult.phase1;
+
+  // Top5 table
+  if (top5.length > 0) {
+    const cols = ['动态满意度排名', '项目中文名', '园区', '大类', '动态满意度_Udyn',
+      '距离_m', '步行时间_min', '实时等待_min', '历史平均等待_min', '总时间倍率_r',
+      '第九维时间舒适度_x9', '拥挤系数', '预计到达时间', '实时数据来源'];
+    document.getElementById('top5TableContainer').innerHTML = buildTable(top5, cols, '项目中文名');
+  } else {
+    document.getElementById('top5TableContainer').innerHTML =
+      '<div class="empty-state"><div class="icon">🔍</div>无可行项目</div>';
+  }
+
+  // All results table
+  if (all_results.length > 0) {
+    const cols = ['动态满意度排名', '项目中文名', '园区', '大类', '动态满意度_Udyn',
+      '八维满意度指数项', '第九维指数项', '距离_m', '步行时间_min', '实时等待_min',
+      '历史平均等待_min', '总时间倍率_r', '第九维时间舒适度_x9', '剔除原因'];
+    document.getElementById('allResultsContainer').innerHTML = buildTable(all_results, cols, '项目中文名');
+  }
+
+  // Exclude list
+  if (exclude_records.length > 0) {
+    document.getElementById('excludeListContainer').innerHTML = exclude_records.map(e =>
+      `<div class="exclude-chip">🚫 ${e['项目中文名']} — ${e['剔除原因']}</div>`
+    ).join('');
+  } else {
+    document.getElementById('excludeListContainer').innerHTML =
+      '<span style="color:#4caf84;font-size:13px;">✅ 当天开放项目均通过初筛</span>';
+  }
+}
+
+// ============================================================
+// Render Phase 2: Routes
+// ============================================================
+
+function renderPhase2() {
+  const { route_summaries, route_details } = calcResult.phase2;
+
+  // Route cards
+  if (route_summaries.length > 0) {
+    document.getElementById('routeCardsContainer').innerHTML = route_summaries.map((r, i) => `
+      <div class="route-card ${i === 0 ? 'selected' : ''}" onclick="selectRoute(${i})" id="routeCard${i}">
+        <div class="route-header">
+          <div class="route-rank">#${r['路线推荐排名']}</div>
+          <div style="text-align:right;">
+            <span class="tag-feasible" style="font-size:13px;">● 可执行</span>
+            <div style="color:#9888c0;font-size:11px;margin-top:2px;">${r['是否完成原路线'] === '是' ? '✅ 完整三项目' : '⚠️ 部分降级'}</div>
+          </div>
+        </div>
+        <div class="route-projects">
+          🗺️ ${r['最优访问顺序']}
+        </div>
+        <div style="color:#9888c0;font-size:12px;margin-bottom:8px;">
+          📍 组合：${r['项目组合']}
+        </div>
+        <div class="route-stats">
+          <div class="route-stat">⏱️ 总耗时 <span>${r['总耗时_min']}min</span></div>
+          <div class="route-stat">🚶 步行 <span>${r['总步行_min']}min</span></div>
+          <div class="route-stat">⏳ 排队 <span>${r['总排队_min']}min</span></div>
+          <div class="route-stat">🎮 游玩 <span>${r['总游玩_min']}min</span></div>
+          <div class="route-stat">🍽️ 就餐 <span>${r['就餐_min']}min</span></div>
+          <div class="route-stat">🛍️ 购物 <span>${r['购物_min']}min</span></div>
+          <div class="route-stat">🕐 空闲 <span>${r['结束后至闭园空闲_min']}min</span></div>
+        </div>
+        ${r['降级说明'] ? `<div style="margin-top:10px;color:#f0a040;font-size:11px;">⚠️ ${r['降级说明']}</div>` : ''}
+      </div>
+    `).join('');
+  } else {
+    document.getElementById('routeCardsContainer').innerHTML =
+      '<div class="empty-state"><div class="icon">🗺️</div>无可执行路线</div>';
+  }
+
+  // Route summary table
+  if (route_summaries.length > 0) {
+    const cols = ['路线推荐排名', '项目组合', '最优访问顺序', '是否完成原路线', '实际完成项目数',
+      '实际可执行路线', '总耗时_min', '总步行_min', '总排队_min', '总游玩_min',
+      '就餐_min', '购物_min', '购物次数', '午餐是否已安排', '晚餐是否已安排',
+      '结束后至闭园空闲_min', '降级说明'];
+    document.getElementById('routeTableContainer').innerHTML = buildTable(route_summaries, cols, '项目组合');
+  }
+
+  // Timeline for first route
+  renderTimeline(0);
+}
+
+function selectRoute(idx) {
+  selectedRouteIdx = idx;
+  document.querySelectorAll('.route-card').forEach((c, i) => {
+    c.classList.toggle('selected', i === idx);
+  });
+  renderTimeline(idx);
+}
+
+function renderTimeline(idx) {
+  const { route_summaries } = calcResult.phase2;
+  if (!route_summaries || idx >= route_summaries.length) return;
+
+  const route = route_summaries[idx];
+  const events = route.detail_events || [];
+
+  if (events.length === 0) {
+    document.getElementById('timelineContainer').innerHTML =
+      '<div class="empty-state">暂无时间线数据</div>';
+    return;
+  }
+
+  let html = `<div style="margin-bottom:16px;color:#f7c948;font-weight:600;">
+    🗺️ 路线 #${route['路线推荐排名']}：${route['最优访问顺序']}
+  </div><div class="timeline">`;
+
+  events.forEach(ev => {
+    let cls = '';
+    let icon = '';
+    switch (ev['节点类型']) {
+      case '步行': cls = 'walk'; icon = '🚶'; break;
+      case '排队': cls = 'queue'; icon = '⏳'; break;
+      case '游玩': case '观看演出': case '见面互动': cls = 'play'; icon = '🎮'; break;
+      case '午餐': case '晚餐': cls = 'meal'; icon = '🍽️'; break;
+      case '购物': cls = 'shop'; icon = '🛍️'; break;
+      default: icon = '📍';
+    }
+    html += `
+      <div class="timeline-item ${cls}">
+        <div class="timeline-time">${icon} ${ev['开始时间']} → ${ev['结束时间']}</div>
+        <div class="timeline-name">${ev['节点类型']}：${ev['项目名称']}</div>
+        <div class="timeline-detail">⏱️ ${ev['耗时_min']}min ${ev['说明'] ? '| ' + ev['说明'] : ''}</div>
+      </div>`;
+  });
+
+  html += '</div>';
+  document.getElementById('timelineContainer').innerHTML = html;
+}
+
+// ============================================================
+// Tab Switching
+// ============================================================
+
+function switchTab(tabId) {
+  document.querySelectorAll('#resultsArea .card:first-child .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#resultsArea .card:first-child .tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function switchRouteTab(tabId) {
+  document.querySelectorAll('#resultsArea .card:last-child .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#resultsArea .card:last-child .tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  event.target.classList.add('active');
+  if (tabId === 'routeTimeline') renderTimeline(selectedRouteIdx);
+}
+
+// ============================================================
+// Utility: Build Table HTML
+// ============================================================
+
+function buildTable(data, cols, keyCol) {
+  if (!data || data.length === 0) return '<div class="empty-state">无数据</div>';
+
+  const availableCols = cols.filter(c => data[0].hasOwnProperty(c));
+  let html = '<table><thead><tr>';
+  availableCols.forEach(c => { html += `<th>${c}</th>`; });
+  html += '</tr></thead><tbody>';
+
+  data.forEach(row => {
+    html += '<tr>';
+    availableCols.forEach(c => {
+      let val = row[c];
+      if (val === null || val === undefined) val = '-';
+      else if (typeof val === 'number') val = val.toFixed ? (Math.abs(val) < 0.01 ? val.toExponential(3) : val.toFixed(3)) : val;
+
+      let cls = '';
+      if (c === '动态满意度排名') {
+        const r = row[c];
+        if (r === 1) cls = 'rank-badge rank-1';
+        else if (r === 2) cls = 'rank-badge rank-2';
+        else if (r === 3) cls = 'rank-badge rank-3';
+        else cls = 'rank-badge rank-other';
+      }
+      if (c === '动态满意度_Udyn') cls = 'score-good';
+      if (c === '是否完成原路线' && val === '是') cls = 'tag-feasible';
+
+      html += `<td><span class="${cls}">${val}</span></td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+// ============================================================
+// Reset
+// ============================================================
+
+function resetAll() {
+  document.getElementById('currentTime').value = '09:35';
+  document.getElementById('userType').value = '普通';
+  document.getElementById('currentLocation').selectedIndex = 0;
+  document.getElementById('doneProjects').selectedIndex = -1;
+  document.getElementById('resultsArea').classList.remove('active');
+  calcResult = null;
+}
+
+// ============================================================
+// Startup
+// ============================================================
+
+loadDataInfo();
+</script>
+
+</body>
+</html>
